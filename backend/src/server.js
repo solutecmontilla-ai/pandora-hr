@@ -45,11 +45,12 @@ fastify.setNotFoundHandler((request, reply) => {
   reply.sendFile('index.html');
 });
 
-// Jobs programados
-require('./services/cronJobs');
-
 const start = async () => {
   try {
+    // Importación inicial de datos migrados (solo si IMPORT_SQL_GZ_B64 está definida)
+    await require('./db/importInicial')();
+    // Jobs programados
+    require('./services/cronJobs');
     await fastify.listen({ port: process.env.PORT || 3002, host: process.env.HOST || '0.0.0.0' });
     console.log(`✅ PandoraHR corriendo en puerto ${process.env.PORT || 3002}`);
   } catch (err) {
