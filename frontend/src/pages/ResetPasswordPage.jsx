@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../utils/api';
+import Logo from '../components/Logo';
 
 export default function ResetPasswordPage() {
   const [params] = useSearchParams();
@@ -38,8 +39,7 @@ export default function ResetPasswordPage() {
     <div style={{ minHeight: '100vh', background: '#111', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
       <div style={{ width: '100%', maxWidth: 380 }}>
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{ width: 56, height: 56, background: '#CC0000', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', fontSize: 24, fontWeight: 700, color: '#fff' }}>P</div>
-          <h1 style={{ color: '#fff', fontSize: 22, fontWeight: 700 }}>Pandora</h1>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 6 }}><Logo size={60} stacked sub={null} /></div>
           <p style={{ color: '#888', fontSize: 13, marginTop: 4 }}>Nueva contraseña</p>
         </div>
         <div className="card">

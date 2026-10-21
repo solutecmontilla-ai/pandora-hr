@@ -2,6 +2,7 @@ import { Outlet, NavLink, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useState, useEffect, createContext, useContext } from 'react';
 import api from '../utils/api';
+import Logo from './Logo';
 
 export const MonedaContext = createContext({ moneda: 'USD', tasa: null });
 export const useMoneda = () => useContext(MonedaContext);
@@ -233,11 +234,7 @@ export default function Layout() {
       <div className="app-layout">
         <aside className="sidebar">
           <div className="sidebar-logo">
-            <div className="logo-icon">P</div>
-            <div>
-              <div className="logo-text">PandoraHR</div>
-              <div className="logo-sub">Amays Group</div>
-            </div>
+            <Logo size={34} />
           </div>
 
           <nav style={{ flex: 1, padding: '8px 0', overflowY: 'auto' }}>

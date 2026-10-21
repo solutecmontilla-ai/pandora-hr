@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import api from '../utils/api';
+import { LogoMark } from '../components/Logo';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -41,7 +42,7 @@ export default function RegisterPage() {
     <div style={{ minHeight: '100vh', background: '#111', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
       <div style={{ width: '100%', maxWidth: 520 }}>
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
-          <div style={{ width: 48, height: 48, background: '#CC0000', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px', fontSize: 22, fontWeight: 700, color: '#fff' }}>F</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}><LogoMark size={48} /></div>
           <h1 style={{ color: '#fff', fontSize: 20, fontWeight: 700 }}>Registrar empresa en PandoraHR</h1>
           <p style={{ color: '#888', fontSize: 12, marginTop: 4 }}>14 días gratis · Sin tarjeta de crédito</p>
         </div>
