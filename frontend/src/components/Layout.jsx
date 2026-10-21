@@ -90,6 +90,16 @@ const NAV_TREE = [
     ],
   },
   {
+    type: 'module', id: 'contabilidad', label: 'Contabilidad',
+    children: [
+      { type: 'link', id: 'cont-diario',     to: '/contabilidad',            label: 'Libro Diario', exact: true },
+      { type: 'link', id: 'cont-cuentas',    to: '/contabilidad/cuentas',    label: 'Plan de Cuentas' },
+      { type: 'link', id: 'cont-mayor',      to: '/contabilidad/mayor',      label: 'Libro Mayor' },
+      { type: 'link', id: 'cont-balance',    to: '/contabilidad/balance',    label: 'Balance de Comprobación' },
+      { type: 'link', id: 'cont-resultados', to: '/contabilidad/resultados', label: 'Estado de Resultados' },
+    ],
+  },
+  {
     type: 'module', id: 'configuracion', label: 'Configuración',
     children: [
       { type: 'link', id: 'empresa',  to: '/empresa',  label: 'Mi Empresa' },
@@ -198,7 +208,7 @@ export default function Layout() {
   const [moneda, setMoneda] = useState('USD');
   const [switchingEmpresa, setSwitchingEmpresa] = useState(false);
   const [openItems, setOpenItems] = useState(new Set([
-    'rrhh', 'trabajadores', 'remuneraciones', 'configuracion',
+    'rrhh', 'trabajadores', 'remuneraciones', 'contabilidad', 'configuracion',
   ]));
   const navigate = useNavigate();
 

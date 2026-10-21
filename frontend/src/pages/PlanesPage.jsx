@@ -136,6 +136,7 @@ export default function PlanesPage() {
                 {feature(true, 'Vacaciones y utilidades')}
                 {feature(true, 'Constancias de trabajo y egreso')}
                 {feature(true, 'Archivos FAOV, RNET (IVSS) y TIUNA')}
+                {feature(true, 'Contabilidad: diario, mayor, balance y resultados')}
               </div>
 
               <div style={{ fontSize: 11, color: '#444', marginBottom: 18 }}>

@@ -6,6 +6,7 @@ import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
 import { EmpresaPage, SuperadminPage, UsuariosPage, EnDesarrolloPage } from './pages/AllPages';
 import { NominaPage, TrayectoriaLaboralPage, ConstanciasPage, ConstanciaEgresoPage } from './pages/NominaPages';
+import { ContabilidadPage } from './pages/ContabilidadPage';
 import PlanesPage from './pages/PlanesPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
@@ -44,6 +45,11 @@ export default function App() {
             <Route path="trabajadores/trayectoria" element={<TrayectoriaLaboralPage />} />
             <Route path="trabajadores/constancias" element={<ConstanciasPage />} />
             <Route path="trabajadores/constancias-egreso" element={<ConstanciaEgresoPage />} />
+            <Route path="contabilidad" element={<ContabilidadPage initialTab="asientos" />} />
+            <Route path="contabilidad/cuentas" element={<ContabilidadPage initialTab="cuentas" />} />
+            <Route path="contabilidad/mayor" element={<ContabilidadPage initialTab="mayor" />} />
+            <Route path="contabilidad/balance" element={<ContabilidadPage initialTab="balance" />} />
+            <Route path="contabilidad/resultados" element={<ContabilidadPage initialTab="resultados" />} />
             <Route path="en-desarrollo" element={<EnDesarrolloPage />} />
             <Route path="usuarios" element={<PrivateRoute roles={['ADMIN','SUPERADMIN']}><UsuariosPage /></PrivateRoute>} />
             <Route path="empresa" element={<EmpresaPage />} />

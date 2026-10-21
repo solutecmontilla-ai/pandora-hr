@@ -672,6 +672,13 @@ const MODULOS_ASIGNABLES = [
     { id: 'nom-vac',  label: 'Vacaciones' },
     { id: 'nom-cfg',  label: 'Configuración de Remuneraciones' },
   ]},
+  { grupo: 'Contabilidad', items: [
+    { id: 'cont-diario',     label: 'Libro Diario' },
+    { id: 'cont-cuentas',    label: 'Plan de Cuentas' },
+    { id: 'cont-mayor',      label: 'Libro Mayor' },
+    { id: 'cont-balance',    label: 'Balance de Comprobación' },
+    { id: 'cont-resultados', label: 'Estado de Resultados' },
+  ]},
 ];
 
 export function UsuariosPage() {

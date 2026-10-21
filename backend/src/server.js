@@ -33,6 +33,7 @@ fastify.register(require('./routes/tasas'),     { prefix: '/api/tasas' });
 fastify.register(require('./routes/superadmin'),    { prefix: '/api/superadmin' });
 fastify.register(require('./routes/nomina'),        { prefix: '/api/nomina' });
 fastify.register(require('./routes/soporte'),       { prefix: '/api/soporte' });
+fastify.register(require('./routes/contabilidad'),  { prefix: '/api/contabilidad' });
 
 // Healthcheck (Coolify)
 fastify.get('/api/health', async () => ({ ok: true }));
@@ -47,6 +48,8 @@ fastify.setNotFoundHandler((request, reply) => {
 
 const start = async () => {
   try {
+    // Migraciones de esquema pendientes
+    await require('./db/migraciones')();
     // Jobs programados
     require('./services/cronJobs');
     await fastify.listen({ port: process.env.PORT || 3002, host: process.env.HOST || '0.0.0.0' });
