@@ -1,6 +1,6 @@
 import { useId } from 'react';
 
-// Isotipo PandoraHR: "P" cuyo hueco contiene una silueta de persona (RRHH)
+// Isotipo PandoraHR: equipo de tres personas unido por un arco (RRHH)
 export function LogoMark({ size = 32 }) {
   const id = useId().replace(/:/g, '');
   return (
@@ -24,12 +24,21 @@ export function LogoMark({ size = 32 }) {
       <rect x="1" y="1" width="38" height="38" rx="10" fill={`url(#bg${id})`} />
       <rect x="1.5" y="1.5" width="37" height="18" rx="9.5" fill={`url(#hl${id})`} />
       <rect x="1" y="1" width="38" height="38" rx="10" fill="none" stroke="#fff" strokeOpacity="0.18" />
-      {/* Letra P con el hueco recortado */}
-      <path fillRule="evenodd" fill={`url(#p${id})`}
-        d="M11.5 8.5H21a9 9 0 0 1 0 18h-3v5h-6.5zM21 12.6a4.9 4.9 0 1 0 0 9.8a4.9 4.9 0 0 0 0-9.8z" />
-      {/* Persona dentro del hueco */}
-      <circle cx="21" cy="15.9" r="1.55" fill="#fff" />
-      <path d="M18.1 21.2a2.9 2.4 0 0 1 5.8 0z" fill="#fff" />
+      {/* Equipo: dos personas atrás */}
+      <g fill="#fff" fillOpacity="0.55">
+        <circle cx="10.6" cy="16.2" r="3.1" />
+        <path d="M4.9 29.5v-1.3a5.7 5.7 0 0 1 11.4 0v1.3z" />
+        <circle cx="29.4" cy="16.2" r="3.1" />
+        <path d="M23.7 29.5v-1.3a5.7 5.7 0 0 1 11.4 0v1.3z" />
+      </g>
+      {/* Persona al frente (separada con contorno del fondo) */}
+      <g fill={`url(#p${id})`} stroke="#B80000" strokeWidth="1.4">
+        <circle cx="20" cy="13.4" r="4.4" />
+        <path d="M12.2 30v-1.6a7.8 7.8 0 0 1 15.6 0V30z" />
+      </g>
+      {/* Arco de unión del equipo */}
+      <path d="M8.5 33.2Q20 38.2 31.5 33.2" fill="none" stroke="#fff" strokeOpacity="0.75"
+        strokeWidth="1.8" strokeLinecap="round" />
     </svg>
   );
 }
