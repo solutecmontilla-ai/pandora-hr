@@ -4,3 +4,4 @@ backend/storage/
 .env
 .env.local
 *.log
+database/produccion.sql
