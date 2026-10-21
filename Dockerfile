@@ -2,7 +2,7 @@
 FROM node:20-alpine AS frontend
 WORKDIR /build/frontend
 COPY frontend/package*.json ./
-RUN npm ci
+RUN npm ci --include=dev
 COPY frontend/ ./
 # vite.config.js compila a ../backend/public
 RUN mkdir -p /build/backend && npm run build
