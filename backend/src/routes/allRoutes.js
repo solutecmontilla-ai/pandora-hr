@@ -9,6 +9,15 @@ const fs = require('fs');
 const path = require('path');
 const STORAGE_PATH = process.env.STORAGE_PATH || '/app/storage';
 
+// Rutas guardadas antes de la migración apuntan al storage de FacturaVE:
+// si no existen, se busca el mismo archivo dentro de STORAGE_PATH/<carpeta>.
+function resolverArchivo(ruta, carpeta) {
+  if (!ruta) return null;
+  if (fs.existsSync(ruta)) return ruta;
+  const local = path.join(STORAGE_PATH, carpeta, path.basename(ruta));
+  return fs.existsSync(local) ? local : null;
+}
+
 // ============================================================
 // tasas.js - Tasa BCV
 // ============================================================
@@ -82,13 +91,13 @@ const empresasRoute = async (fastify) => {
 
   fastify.get('/logo', { preHandler: [authenticate] }, async (req, reply) => {
     const emp = await db.queryOne('SELECT logo_path FROM empresas WHERE id=?', [req.empresaId]);
-    if (!emp?.logo_path || !fs.existsSync(emp.logo_path))
-      return reply.status(404).send({ error: 'Sin logo' });
-    const ext = path.extname(emp.logo_path).toLowerCase();
+    const logo = resolverArchivo(emp?.logo_path, 'logos');
+    if (!logo) return reply.status(404).send({ error: 'Sin logo' });
+    const ext = path.extname(logo).toLowerCase();
     const mime = { '.png':'image/png', '.jpg':'image/jpeg', '.jpeg':'image/jpeg', '.gif':'image/gif', '.webp':'image/webp', '.svg':'image/svg+xml' }[ext] || 'application/octet-stream';
     reply.header('Content-Type', mime);
     reply.header('Cache-Control', 'private, max-age=3600');
-    return reply.send(fs.createReadStream(emp.logo_path));
+    return reply.send(fs.createReadStream(logo));
   });
 
   // ── Hoja membretada ──────────────────────────────────────────
@@ -106,11 +115,11 @@ const empresasRoute = async (fastify) => {
 
   fastify.get('/membrete', { preHandler: [authenticate] }, async (req, reply) => {
     const emp = await db.queryOne('SELECT membrete_path FROM empresas WHERE id=?', [req.empresaId]);
-    if (!emp?.membrete_path || !fs.existsSync(emp.membrete_path))
-      return reply.status(404).send({ error: 'Sin membrete' });
+    const membrete = resolverArchivo(emp?.membrete_path, 'membretes');
+    if (!membrete) return reply.status(404).send({ error: 'Sin membrete' });
     reply.header('Content-Type', 'application/pdf');
     reply.header('Content-Disposition', 'inline; filename="membrete.pdf"');
-    return reply.send(fs.createReadStream(emp.membrete_path));
+    return reply.send(fs.createReadStream(membrete));
   });
 
   // ── Gestión de usuarios del tenant ──────────────────────────

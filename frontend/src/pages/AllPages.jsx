@@ -1,6 +1,7 @@
 // pages/AllPages.jsx — Empresa, Usuarios, Superadmin
 import { useState, useEffect } from 'react';
 import api from '../utils/api';
+import { ImagenProtegida, abrirArchivo } from '../utils/archivos';
 import dayjs from 'dayjs';
 import { useAuth } from '../hooks/useAuth';
 
@@ -57,7 +58,7 @@ export function EmpresaPage() {
             <div className="card-header"><div className="card-title">Logo de empresa</div></div>
             <div className="card-body">
               {empresa.logo_path && (
-                <img src="/api/empresas/logo" alt="Logo" style={{ width:'100%', maxHeight:80, objectFit:'contain', marginBottom:12, background:'#fff', padding:8, borderRadius:4 }} />
+                <ImagenProtegida src="/empresas/logo" alt="Logo" style={{ width:'100%', maxHeight:80, objectFit:'contain', marginBottom:12, background:'#fff', padding:8, borderRadius:4 }} />
               )}
               <input type="file" accept="image/*" className="form-control" onChange={async e => {
                 const file = e.target.files[0]; if (!file) return;
@@ -75,7 +76,7 @@ export function EmpresaPage() {
               {tieneMemb && (
                 <div style={{ marginBottom:12, display:'flex', alignItems:'center', gap:8 }}>
                   <span className="badge badge-verde" style={{ fontSize:11 }}>✓ Membrete cargado</span>
-                  <a href="/api/empresas/membrete" target="_blank" rel="noreferrer" style={{ fontSize:12, color:'#888' }}>Ver PDF</a>
+                  <a href="#" onClick={e => { e.preventDefault(); abrirArchivo('/empresas/membrete'); }} style={{ fontSize:12, color:'#888' }}>Ver PDF</a>
                 </div>
               )}
               <input type="file" accept="application/pdf" className="form-control" onChange={async e => {

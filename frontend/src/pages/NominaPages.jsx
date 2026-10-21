@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import api from '../utils/api';
+import { ImagenProtegida } from '../utils/archivos';
 import dayjs from 'dayjs';
 import { MonedaContext } from '../components/Layout';
 import { useAuth } from '../hooks/useAuth';
@@ -1870,7 +1871,7 @@ function NominasTab() {
                     <h2 style={{ color: '#111', margin: 0 }}>{pemp?.razon_social || 'Empresa'}</h2>
                   </div>
                   {pemp?.logo_path && (
-                    <img src="/api/empresas/logo" alt="Logo empresa"
+                    <ImagenProtegida src="/empresas/logo" alt="Logo empresa"
                       style={{ height: 56, maxWidth: 160, objectFit: 'contain' }} />
                   )}
                 </div>
@@ -4107,7 +4108,7 @@ function CestaTicketTab() {
               <h2 style={{ color: '#111', margin: 0 }}>{pemp?.razon_social || 'Empresa'}</h2>
             </div>
             {pemp?.logo_path && (
-              <img src="/api/empresas/logo" alt="Logo empresa"
+              <ImagenProtegida src="/empresas/logo" alt="Logo empresa"
                 style={{ height: 56, maxWidth: 160, objectFit: 'contain' }} />
             )}
           </div>
@@ -7220,7 +7221,7 @@ function UtilidadesGeneral({ onBack }) {
               <h2 style={{ color: '#111', margin: 0 }}>{pemp?.razon_social || 'Empresa'}</h2>
             </div>
             {pemp?.logo_path && (
-              <img src="/api/empresas/logo" alt="Logo empresa"
+              <ImagenProtegida src="/empresas/logo" alt="Logo empresa"
                 style={{ height: 56, maxWidth: 160, objectFit: 'contain' }} />
             )}
           </div>
