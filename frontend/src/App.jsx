@@ -35,13 +35,19 @@ export default function App() {
             <Route path="nomina/cesta-ticket" element={<NominaPage initialTab="cesta" />} />
             <Route path="nomina/vacaciones" element={<NominaPage initialTab="vacaciones" />} />
             <Route path="nomina/utilidades" element={<NominaPage initialTab="utilidades" />} />
+            <Route path="nomina/utilidades/anteriores" element={<NominaPage initialTab="utilidades" subvista="anteriores" />} />
+            <Route path="nomina/utilidades/actual" element={<NominaPage initialTab="utilidades" subvista="actual" />} />
+            <Route path="nomina/utilidades/fraccionado" element={<NominaPage initialTab="utilidades" subvista="fraccionado" />} />
+            <Route path="nomina/utilidades/general" element={<NominaPage initialTab="utilidades" subvista="general" />} />
             <Route path="nomina/prestaciones-sociales" element={<NominaPage initialTab="ppss" />} />
             <Route path="nomina/egresos" element={<NominaPage initialTab="liquidaciones" />} />
             <Route path="nomina/especial" element={<NominaPage initialTab="nomina_especial" />} />
             <Route path="nomina/recursos" element={<NominaPage initialTab="recursos" />} />
             <Route path="nomina/configuracion" element={<NominaPage initialTab="config" />} />
+            <Route path="nomina/configuracion/legales" element={<NominaPage initialTab="config" subvista="legales" />} />
+            <Route path="nomina/configuracion/bancarios" element={<NominaPage initialTab="config" subvista="bancarios" />} />
             <Route path="trabajadores" element={<NominaPage initialTab="empleados" />} />
-            <Route path="trabajadores/nuevo" element={<NominaPage initialTab="empleados" />} />
+            <Route path="trabajadores/nuevo" element={<NominaPage initialTab="empleados" subvista="nuevo" />} />
             <Route path="trabajadores/trayectoria" element={<TrayectoriaLaboralPage />} />
             <Route path="trabajadores/constancias" element={<ConstanciasPage />} />
             <Route path="trabajadores/constancias-egreso" element={<ConstanciaEgresoPage />} />

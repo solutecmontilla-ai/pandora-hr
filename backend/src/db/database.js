@@ -10,6 +10,9 @@ const pool = mysql.createPool({
   connectionLimit: 20,
   queueLimit: 0,
   charset: 'utf8mb4',
+  // Columnas DATE como 'YYYY-MM-DD' (no Date con hora): los <input type="date">
+  // las muestran y al reenviarlas MariaDB en modo estricto las acepta.
+  dateStrings: ['DATE'],
   timezone: '-04:30' // Venezuela UTC-4:30
 });
 

@@ -1,19 +1,15 @@
 // pages/AllPages.jsx — Empresa, Usuarios, Superadmin
 import { useState, useEffect } from 'react';
 import api from '../utils/api';
-import { ImagenProtegida, abrirArchivo } from '../utils/archivos';
+import { ImagenProtegida } from '../utils/archivos';
 import dayjs from 'dayjs';
 import { useAuth } from '../hooks/useAuth';
 
 export function EmpresaPage() {
   const [empresa, setEmpresa] = useState(null);
   const [guardando, setGuardando] = useState(false);
-  const [tieneMemb, setTieneMemb] = useState(false);
 
-  const load = () => api.get('/empresas/me').then(r => {
-    setEmpresa(r.data);
-    setTieneMemb(!!r.data.membrete_path);
-  });
+  const load = () => api.get('/empresas/me').then(r => setEmpresa(r.data));
   useEffect(() => { load(); }, []);
 
   const handleSave = async () => {
@@ -54,7 +50,7 @@ export function EmpresaPage() {
             </div>
           </div>
 
-          <div className="card mb-4">
+          <div className="card">
             <div className="card-header"><div className="card-title">Logo de empresa</div></div>
             <div className="card-body">
               {empresa.logo_path && (
@@ -67,25 +63,6 @@ export function EmpresaPage() {
                 catch { alert('Error al subir logo'); }
               }} />
               <p className="text-gris text-sm" style={{ marginTop:8 }}>PNG o JPG · máx 2MB · recomendado 300×100px · se imprime en todos los reportes</p>
-            </div>
-          </div>
-
-          <div className="card">
-            <div className="card-header"><div className="card-title">Hoja membretada</div></div>
-            <div className="card-body">
-              {tieneMemb && (
-                <div style={{ marginBottom:12, display:'flex', alignItems:'center', gap:8 }}>
-                  <span className="badge badge-verde" style={{ fontSize:11 }}>✓ Membrete cargado</span>
-                  <a href="#" onClick={e => { e.preventDefault(); abrirArchivo('/empresas/membrete'); }} style={{ fontSize:12, color:'#888' }}>Ver PDF</a>
-                </div>
-              )}
-              <input type="file" accept="application/pdf" className="form-control" onChange={async e => {
-                const file = e.target.files[0]; if (!file) return;
-                const fd = new FormData(); fd.append('membrete', file);
-                try { await api.post('/empresas/membrete', fd); setTieneMemb(true); alert('Hoja membretada actualizada'); }
-                catch { alert('Error al subir membrete'); }
-              }} />
-              <p className="text-gris text-sm" style={{ marginTop:8 }}>PDF · tamaño carta · orientación vertical · se usa como fondo en documentos impresos</p>
             </div>
           </div>
         </div>

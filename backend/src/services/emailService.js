@@ -1,7 +1,7 @@
 const nodemailer = require('nodemailer');
 
 function getTransporter() {
-  if (!process.env.SMTP_HOST) return null;
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return null;
   return nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: parseInt(process.env.SMTP_PORT || '587'),
@@ -12,9 +12,11 @@ function getTransporter() {
 
 async function sendMail({ to, subject, html }) {
   const transporter = getTransporter();
+  // Sin SMTP se informa el error: antes se registraba en el log y la pantalla
+  // decía "Recibo enviado" aunque el correo nunca salía.
   if (!transporter) {
-    console.log(`[EMAIL] → ${to} | ${subject}`);
-    return;
+    console.log(`[EMAIL] SMTP sin configurar → ${to} | ${subject}`);
+    throw new Error('el servidor de correo (SMTP) no está configurado');
   }
   await transporter.sendMail({
     from: `"PandoraHR" <${process.env.SMTP_FROM || 'noreply@pandorahr.amaysgroup.com'}>`,

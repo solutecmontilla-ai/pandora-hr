@@ -53,8 +53,8 @@ const NAV_TREE = [
           {
             type: 'group', id: 'trab-gestion', label: 'Trabajadores',
             children: [
-              { type: 'link', id: 'trab-consulta', to: '/trabajadores',       label: 'Consulta de Trabajadores' },
-              { type: 'link', id: 'trab-nuevo',    to: '/trabajadores/nuevo', label: 'Nuevo Trabajador' },
+              { type: 'link', id: 'trab-nuevo',    to: '/trabajadores/nuevo', label: 'Nuevo trabajador' },
+              { type: 'link', id: 'trab-consulta', to: '/trabajadores',       label: 'Consulta de trabajadores', exact: true },
             ],
           },
           {
@@ -67,8 +67,8 @@ const NAV_TREE = [
           {
             type: 'group', id: 'constancias', label: 'Constancias',
             children: [
-              { type: 'link', id: 'const-trab',   to: '/trabajadores/constancias', label: 'Constancia de Trabajo' },
-              { type: 'link', id: 'const-egreso', to: '/trabajadores/constancias-egreso', label: 'Constancia de Egreso' },
+              { type: 'link', id: 'const-trab',   to: '/trabajadores/constancias', label: 'Constancia de trabajo' },
+              { type: 'link', id: 'const-egreso', to: '/trabajadores/constancias-egreso', label: 'Constancia de egreso' },
             ],
           },
         ],
@@ -79,12 +79,26 @@ const NAV_TREE = [
           { type: 'link', id: 'nom-sal',      to: '/nomina/salarios',      label: 'Nómina de Salarios' },
           { type: 'link', id: 'nom-cesta',    to: '/nomina/cesta-ticket',  label: 'Nómina de Cesta Ticket' },
           { type: 'link', id: 'nom-vac',      to: '/nomina/vacaciones',    label: 'Vacaciones' },
-          { type: 'link', id: 'nom-util',     to: '/nomina/utilidades',             label: 'Utilidades / Bonificación' },
+          {
+            type: 'group', id: 'utilidades', label: 'Utilidades/Bonificación de fin de año',
+            children: [
+              { type: 'link', id: 'nom-util-ant',   to: '/nomina/utilidades/anteriores',  label: 'Consulta de cálculos de años anteriores' },
+              { type: 'link', id: 'nom-util-act',   to: '/nomina/utilidades/actual',      label: 'Consulta de cálculos año actual' },
+              { type: 'link', id: 'nom-util-frac',  to: '/nomina/utilidades/fraccionado', label: 'Cálculo fraccionado' },
+              { type: 'link', id: 'nom-util-gen',   to: '/nomina/utilidades/general',     label: 'Cálculo general' },
+            ],
+          },
           { type: 'link', id: 'nom-ppss',     to: '/nomina/prestaciones-sociales',  label: 'Prestaciones Sociales',      enDesarrollo: true },
           { type: 'link', id: 'nom-egresos',  to: '/nomina/egresos',                label: 'Egresos',                    enDesarrollo: true },
-          { type: 'link', id: 'nom-especial', to: '/nomina/especial',               label: 'Nóminas especiales',         enDesarrollo: true },
+          { type: 'link', id: 'nom-especial', to: '/nomina/especial',               label: 'Nómina especial',            enDesarrollo: true },
           { type: 'link', id: 'nom-recursos', to: '/nomina/recursos',               label: 'Recursos',                   enDesarrollo: true },
-          { type: 'link', id: 'nom-cfg',      to: '/nomina/configuracion', label: 'Configuración de Remuneraciones' },
+          {
+            type: 'group', id: 'nom-cfg', label: 'Configuración de Remuneraciones',
+            children: [
+              { type: 'link', id: 'nom-cfg-legal', modulo: 'nom-cfg', to: '/nomina/configuracion/legales',   label: 'Parámetros legales' },
+              { type: 'link', id: 'nom-cfg-banco', modulo: 'nom-cfg', to: '/nomina/configuracion/bancarios', label: 'Parámetros bancarios' },
+            ],
+          },
         ],
       },
     ],
@@ -112,7 +126,8 @@ function canSee(node, permisos, userRol, modulosAsignados) {
   if (node.permiso === '_admin') return ['ADMIN_SR', 'SUPERADMIN'].includes(userRol);
   if (modulosAsignados && ['ADMIN_EJ', 'INVITADO'].includes(userRol)) {
     if (node.type === 'link' && !node.enDesarrollo) {
-      return modulosAsignados.includes(node.id);
+      // `modulo`: id asignable del que depende el enlace (si difiere de su propio id)
+      return modulosAsignados.includes(node.modulo || node.id);
     }
   }
   if (!node.permiso) return true;

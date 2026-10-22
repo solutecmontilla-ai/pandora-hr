@@ -6,6 +6,7 @@ const nominaRoute = async (fastify) => {
   const db = require('../db/database');
   const { authenticate } = require('../middleware/auth');
   const { sendMail } = require('../services/emailService');
+  const { sincronizarTrayectoria } = require('../services/trayectoriaService');
 
   const IVSS_TRABAJADOR  = 0.04;
   const FAOV_TRABAJADOR  = 0.01;
@@ -133,6 +134,7 @@ const nominaRoute = async (fastify) => {
   // ─────────────────────────────────────────────
   fastify.get('/empleados', { preHandler: [authenticate] }, async (req) => {
     const { activo, estado_trabajador } = req.query;
+    await sincronizarTrayectoria(req.empresaId);
     let sql = 'SELECT * FROM empleados WHERE empresa_id=?';
     const p = [req.empresaId];
     if (activo !== undefined) { sql += ' AND activo=?'; p.push(activo); }
@@ -141,6 +143,7 @@ const nominaRoute = async (fastify) => {
   });
 
   fastify.get('/empleados/:id', { preHandler: [authenticate] }, async (req, reply) => {
+    await sincronizarTrayectoria(req.empresaId);
     const emp = await db.queryOne('SELECT * FROM empleados WHERE id=? AND empresa_id=?',
       [req.params.id, req.empresaId]);
     if (!emp) return reply.status(404).send({ error: 'Empleado no encontrado' });
@@ -198,6 +201,8 @@ const nominaRoute = async (fastify) => {
        supervisor_id || null, periodo_prueba ? 1 : 0, periodo_prueba_dias || null,
        notas || null, req.usuario.id]
     );
+    // Si ya entró en vigencia, el nuevo cargo se refleja de inmediato en la ficha
+    await sincronizarTrayectoria(req.empresaId);
     return reply.status(201).send({ id: r.insertId });
   });
 
@@ -243,7 +248,7 @@ const nominaRoute = async (fastify) => {
     return { id: r.insertId };
   });
 
-  fastify.put('/empleados/:id', { preHandler: [authenticate] }, async (req) => {
+  fastify.put('/empleados/:id', { preHandler: [authenticate] }, async (req, reply) => {
     const { id } = req.params;
     const {
       letra_ci, cedula, nombre, segundo_nombre, apellido, segundo_apellido,
@@ -255,7 +260,10 @@ const nominaRoute = async (fastify) => {
       contacto1_nombre, contacto1_parentesco, contacto1_tel_movil, contacto1_tel_fijo, contacto1_email,
       contacto2_nombre, contacto2_parentesco, contacto2_tel_movil, contacto2_tel_fijo, contacto2_email
     } = req.body;
-    // numero_expediente no se actualiza vía PUT — es inmutable tras la creación
+    // numero_expediente no se actualiza vía PUT — es inmutable tras la creación.
+    // La fecha de ingreso tampoco: solo cambia con un reingreso.
+    const prev = await db.queryOne('SELECT fecha_ingreso FROM empleados WHERE id=? AND empresa_id=?', [id, req.empresaId]);
+    if (!prev) return reply.status(404).send({ error: 'Empleado no encontrado' });
     await db.execute(
       `UPDATE empleados SET
         letra_ci=?, cedula=?, nombre=?, segundo_nombre=?, apellido=?, segundo_apellido=?,
@@ -271,8 +279,8 @@ const nominaRoute = async (fastify) => {
       [letra_ci || 'V', cedula, nombre, segundo_nombre || null, apellido, segundo_apellido || null,
        cargo || null, departamento || null, email || null, telefono_movil || null, telefono_fijo || null,
        direccion || null, estado_residencia || null,
-       fecha_ingreso, fecha_egreso || null,
-       salario_base || null, tipo_contrato, banco || null, tipo_cuenta, numero_cuenta || null,
+       prev.fecha_ingreso || fecha_ingreso, fecha_egreso || null,
+       salario_base || null, tipo_contrato || 'FIJO', banco || null, tipo_cuenta || 'AHORRO', numero_cuenta || null,
        codigo_ocupacion || null, nivel_instruccion || null, titulo_obtenido || null,
        indigena ? 1 : 0, discapacidad ? 1 : 0, embarazada ? 1 : 0,
        activo !== undefined ? activo : 1,

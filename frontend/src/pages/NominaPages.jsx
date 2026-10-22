@@ -143,7 +143,7 @@ const TIPOS_NOMINA_BANCOS = [
 // ─────────────────────────────────────────────────────────────
 // EMPLEADOS
 // ─────────────────────────────────────────────────────────────
-function EmpleadosTab() {
+function EmpleadosTab({ abrirNuevo = false }) {
   const [empleados, setEmpleados] = useState([]);
   const [modal, setModal] = useState(false);
   const [editando, setEditando] = useState(null);
@@ -176,6 +176,10 @@ function EmpleadosTab() {
     load();
     api.get('/nomina/config').then(r => setMonedaNomina(r.data.moneda_nomina || 'USD')).catch(() => {});
   }, []);
+  // Menú "Nuevo trabajador": abre el formulario vacío; "Consulta": lo cierra
+  useEffect(() => {
+    setEditando(null); setForm(emptyForm); setModal(abrirNuevo);
+  }, [abrirNuevo]);
 
   const handleSave = async () => {
     try {
@@ -192,7 +196,12 @@ function EmpleadosTab() {
 
   const handleEdit = (emp) => {
     setEditando(emp);
-    setForm({ ...emp, indigena: !!emp.indigena, discapacidad: !!emp.discapacidad, embarazada: !!emp.embarazada });
+    setForm({
+      ...emp,
+      fecha_ingreso: emp.fecha_ingreso ? String(emp.fecha_ingreso).slice(0, 10) : '',
+      fecha_egreso:  emp.fecha_egreso  ? String(emp.fecha_egreso).slice(0, 10)  : '',
+      indigena: !!emp.indigena, discapacidad: !!emp.discapacidad, embarazada: !!emp.embarazada,
+    });
     setModal(true);
   };
 
@@ -525,7 +534,9 @@ function EmpleadosTab() {
               <div className="form-grid form-grid-2">
                 <div className="form-group">
                   <label className="form-label">Fecha de ingreso *</label>
-                  <input className="form-control" type="date" value={form.fecha_ingreso}
+                  {/* Al editar no se modifica: la fecha de ingreso solo cambia con un reingreso */}
+                  <input className="form-control" type="date" value={form.fecha_ingreso || ''}
+                    readOnly={!!editando} disabled={!!editando}
                     onChange={e => setForm({ ...form, fecha_ingreso: e.target.value })} />
                 </div>
                 <div className="form-group">
@@ -1101,7 +1112,11 @@ function NominasTab() {
       descuento_minutos_usd:   pri(computed.descuento_minutos_bs,   computed.descuento_minutos_usd),
       descuento_ausencias_usd: pri(computed.descuento_ausencias_bs, computed.descuento_ausencias_usd),
       reposo_convalidado_usd:  pri(computed.reposo_convalidado_bs,  computed.reposo_convalidado_usd),
-      islr_retenido:           pri(computed.islr_bs,                computed.islr_usd),
+      // Sin estos dos el backend conservaba los montos anteriores y el
+      // "Total asignaciones" del detalle no coincidía con el de esta ventana
+      dias_feriados_usd:       pri(computed.dias_feriados_bs,       computed.dias_feriados_usd),
+      bono_nocturno_usd:       pri(computed.bono_nocturno_bs,       computed.bono_nocturno_usd),
+      islr_retenido:          pri(computed.islr_bs,                computed.islr_usd),
       prestamos_deduc:         computed.prestamos_usd,
       prestamos_bs:            computed.prestamos_bs,
       otras_deducciones:       computed.cxc_usd,
@@ -2485,17 +2500,30 @@ function NominasTab() {
     const roStyle  = { background: '#1a1a1a', color: '#ccc' };
     const autoLunes = calcLunesPeriodo(selected.periodo, selected.tipo);
 
+    // step '0.5' o '1': al salir del campo el valor se ajusta al múltiplo (0; 0,5; 1; 1,5…)
     const fi = (key, label, step = '0.01') => (
       <div className="form-group">
         <label className="form-label">{label}</label>
         <input className="form-control" type="number" min="0" step={step}
-          value={formItem[key] ?? ''} onChange={e => setFormItem({ ...formItem, [key]: e.target.value })} />
+          value={formItem[key] ?? ''} onChange={e => setFormItem({ ...formItem, [key]: e.target.value })}
+          onBlur={e => {
+            const paso = Number(step);
+            if (paso < 0.5 || e.target.value === '') return;
+            const v = Math.max(0, Math.round(Number(e.target.value) / paso) * paso);
+            setFormItem(f => ({ ...f, [key]: Number.isFinite(v) ? v : 0 }));
+          }} />
       </div>
     );
     const ro = (label, val, red = false) => (
       <div className="form-group">
         <label className="form-label" style={{ color: red ? '#CC0000' : undefined }}>{label}</label>
         <input className="form-control" readOnly value={val} style={roStyle} />
+      </div>
+    );
+    const tituloSeccion = (titulo, nota) => (
+      <div style={{ fontWeight: 700, fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
+        {titulo}{' '}
+        <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 400, color: '#888' }}>({nota})</span>
       </div>
     );
 
@@ -2724,9 +2752,9 @@ function NominasTab() {
                 </div>
 
                 {/* 3. Días adicionales */}
-                <div style={{ fontWeight: 700, fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Días adicionales a pagar</div>
+                {tituloSeccion('Días adicionales a pagar', '0,5 equivale a media jornada laboral y 1,0 equivale una jornada laboral completa')}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 16 }}>
-                  {fi('dias_adicionales_cantidad', 'Cantidad de días')}
+                  {fi('dias_adicionales_cantidad', 'Cantidad de días', '0.5')}
                   {ro('Días adicionales en USD (auto)', `$ ${Number(computed.dias_adicionales_usd || 0).toFixed(4)}`)}
                   {ro('Días adicionales en Bs. (auto)', `Bs. ${Number(computed.dias_adicionales_bs || 0).toFixed(2)}`)}
                 </div>
@@ -2762,25 +2790,25 @@ function NominasTab() {
                 </div>
 
                 {/* 5. Horas extra diurnas */}
-                <div style={{ fontWeight: 700, fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Horas extra diurnas (recargo 50%)</div>
+                {tituloSeccion('Horas extra diurnas', 'recargo del 50% sobre el valor de la hora laboral | Para agregar este cálculo: 0,5 equivale a media hora laboral y 1,0 equivale una hora laboral completa')}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 16 }}>
-                  {fi('he_diurnas_cantidad', 'Cantidad de horas')}
+                  {fi('he_diurnas_cantidad', 'Cantidad de horas', '0.5')}
                   {ro('Monto en USD (auto)', `$ ${Number(computed.he_diurnas_usd || 0).toFixed(4)}`)}
                   {ro('Monto en Bs. (auto)', `Bs. ${Number(computed.he_diurnas_bs || 0).toFixed(2)}`)}
                 </div>
 
                 {/* 6. Horas extra nocturnas */}
-                <div style={{ fontWeight: 700, fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Horas extra nocturnas (hora × 1.30 × 1.50)</div>
+                {tituloSeccion('Horas extra nocturnas', 'recargo 30% y 50% sobre el valor de la hora laboral | Para agregar este cálculo: 0,5 equivale a media hora laboral y 1,0 equivale una hora laboral completa')}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 16 }}>
-                  {fi('he_nocturnas_cantidad', 'Cantidad de horas')}
+                  {fi('he_nocturnas_cantidad', 'Cantidad de horas', '0.5')}
                   {ro('Monto en USD (auto)', `$ ${Number(computed.he_nocturnas_usd || 0).toFixed(4)}`)}
                   {ro('Monto en Bs. (auto)', `Bs. ${Number(computed.he_nocturnas_bs || 0).toFixed(2)}`)}
                 </div>
 
                 {/* 7. Domingos y feriados */}
-                <div style={{ fontWeight: 700, fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Domingos y feriados (50% recargo sobre salario diario)</div>
+                {tituloSeccion('Domingos y feriados', 'recargo del 50% sobre el valor de la jornada diaria | Para agregar este cálculo: 0,5 equivale a media jornada laboral y 1,0 equivale una jornada laboral completa')}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 16 }}>
-                  {fi('dias_feriados_cantidad', 'Domingos y feriados (cant.)', '1')}
+                  {fi('dias_feriados_cantidad', 'Cantidad de domingos y feriados', '0.5')}
                   {ro('Domingos y feriados en USD (auto)', `$ ${Number(computed.dias_feriados_usd || 0).toFixed(4)}`)}
                   {ro('Domingos y feriados en Bs. (auto)', `Bs. ${Number(computed.dias_feriados_bs || 0).toFixed(2)}`)}
                 </div>
@@ -2788,7 +2816,7 @@ function NominasTab() {
                 {/* 8. Reposo convalidado */}
                 <div style={{ fontWeight: 700, fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Pago por días de reposo convalidado (33.33% del salario diario)</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 16 }}>
-                  {fi('reposo_convalidado_cantidad', 'Cantidad de días')}
+                  {fi('reposo_convalidado_cantidad', 'Cantidad de días', '1')}
                   {ro('Reposo convalidado en USD (auto)', `$ ${Number(computed.reposo_convalidado_usd || 0).toFixed(4)}`)}
                   {ro('Reposo convalidado en Bs. (auto)', `Bs. ${Number(computed.reposo_convalidado_bs || 0).toFixed(2)}`)}
                 </div>
@@ -3226,7 +3254,8 @@ function NominasTab() {
 // ─────────────────────────────────────────────────────────────
 // CONFIGURACIÓN NÓMINA (parámetros legales)
 // ─────────────────────────────────────────────────────────────
-function ConfigNominaTab() {
+// seccion: null (todo) | 'legales' | 'bancarios'
+function ConfigNominaTab({ seccion = null }) {
   const { tasa: tasaBCV } = useContext(MonedaContext);
   const { user } = useAuth();
   const puedeEditar = ['ADMIN_SR', 'SUPERADMIN'].includes(user?.rol);
@@ -3311,8 +3340,12 @@ function ConfigNominaTab() {
   const tasa = Number(tasaBCV) || 1;
   const valorDiaCalculado = ((Number(form.cesta_ticket_dias) || 40) * tasa / 30).toFixed(2);
 
+  const verLegales   = !seccion || seccion === 'legales';
+  const verBancarios = !seccion || seccion === 'bancarios';
+
   return (
     <div>
+      {verLegales && <>
       <div className="card mb-4">
         <div className="card-header">
           <div className="card-title">Parámetros legales</div>
@@ -3527,6 +3560,9 @@ function ConfigNominaTab() {
         </div>
       </div>
 
+      </>}
+
+      {verBancarios && <>
       {/* R5-11.3 — Parámetros bancarios por tipo de nómina */}
       <div className="card mb-4">
         <div className="card-header">
@@ -3727,6 +3763,9 @@ function ConfigNominaTab() {
         </div>
       </div>
 
+      </>}
+
+      {verLegales && <>
       {/* Tabla resumen de porcentajes legales */}
       <div className="card">
         <div className="card-header"><div className="card-title">Resumen de deducciones legales vigentes</div></div>
@@ -3768,6 +3807,7 @@ function ConfigNominaTab() {
           </table>
         </div>
       </div>
+      </>}
     </div>
   );
 }
@@ -4589,11 +4629,17 @@ function CestaTicketTab() {
   // ── DETALLE NÓMINA CESTA TICKET ──────────────────────────────
   if (selected) {
     const roStyle = { background: '#1a1a1a', color: '#ccc' };
-    const fi = (key, label) => (
+    // entero = true: solo días completos (0; 1; 2…), se redondea al salir del campo
+    const fi = (key, label, entero = false) => (
       <div className="form-group">
         <label className="form-label">{label}</label>
-        <input className="form-control" type="number" min="0" step="0.01"
-          value={formItem[key] ?? ''} onChange={e => setFormItem({ ...formItem, [key]: e.target.value })} />
+        <input className="form-control" type="number" min="0" step={entero ? '1' : '0.01'}
+          value={formItem[key] ?? ''} onChange={e => setFormItem({ ...formItem, [key]: e.target.value })}
+          onBlur={e => {
+            if (!entero || e.target.value === '') return;
+            const v = Math.max(0, Math.round(Number(e.target.value)));
+            setFormItem(f => ({ ...f, [key]: Number.isFinite(v) ? v : 0 }));
+          }} />
       </div>
     );
     const ro = (label, val, red = false) => (
@@ -4740,7 +4786,7 @@ function CestaTicketTab() {
                   {ro('Días de descanso en Bs. (auto)', `Bs. ${Number(computedCT.dias_descanso_bs || 0).toFixed(2)}`)}
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 12 }}>
-                  {fi('dias_adicionales_cantidad', 'Días adicionales')}
+                  {fi('dias_adicionales_cantidad', 'Días adicionales', true)}
                   {ro('Días adicionales en USD (auto)', `$ ${Number(computedCT.dias_adicionales_usd || 0).toFixed(4)}`)}
                   {ro('Días adicionales en Bs. (auto)', `Bs. ${Number(computedCT.dias_adicionales_bs || 0).toFixed(2)}`)}
                 </div>
@@ -7460,8 +7506,9 @@ function UtilidadesGeneral({ onBack }) {
 // ─────────────────────────────────────────────────────────────
 // UTILIDADES / BONIFICACIÓN DE FIN DE AÑO
 // ─────────────────────────────────────────────────────────────
-function UtilidadesTab() {
-  const [vista, setVista]       = useState('menu'); // menu | anteriores | actual | fraccionado | general
+function UtilidadesTab({ vistaInicial = 'menu' }) {
+  const [vista, setVista]       = useState(vistaInicial); // menu | anteriores | actual | fraccionado | general
+  useEffect(() => { setVista(vistaInicial); }, [vistaInicial]);
   const [calculos, setCalculos] = useState([]);
   const [loading, setLoading]   = useState(false);
   const [ejercicio, setEjercicio] = useState('');
@@ -7647,8 +7694,11 @@ const NOMINA_MENU = [
   { key: 'config',          label: 'Configuración'         },
 ];
 
-export function NominaPage({ initialTab = null }) {
+export function NominaPage({ initialTab = null, subvista = null }) {
   const [tab, setTab] = useState(initialTab);
+  // Las rutas /nomina/* reutilizan esta instancia: sin esto, al cambiar de
+  // opción en el menú lateral la pantalla se quedaba en la anterior.
+  useEffect(() => { setTab(initialTab); }, [initialTab, subvista]);
 
   const activeLabel = NOMINA_MENU.find(m => m.key === tab)?.label || '';
 
@@ -7718,7 +7768,7 @@ export function NominaPage({ initialTab = null }) {
       {tab === 'nominas'         && <NominasTab />}
       {tab === 'cesta'           && <CestaTicketTab />}
       {tab === 'vacaciones'      && <VacacionesTab />}
-      {tab === 'utilidades'      && <UtilidadesTab />}
+      {tab === 'utilidades'      && <UtilidadesTab vistaInicial={subvista || 'menu'} />}
       {tab === 'ppss'            && <ModuloEnDesarrollo nombre="Prestaciones Sociales" />}
       {tab === 'constancias'     && <ModuloEnDesarrollo nombre="Constancias de trabajo" />}
       {tab === 'liquidaciones'   && <ModuloEnDesarrollo nombre="Egresos"
@@ -7726,9 +7776,9 @@ export function NominaPage({ initialTab = null }) {
       {tab === 'nomina_especial' && <ModuloEnDesarrollo nombre="Nóminas especiales"
         incluye="configuración, recibos de pago y archivo .TXT." />}
       {tab === 'reportes'        && <ModuloEnDesarrollo nombre="Reportes" />}
-      {tab === 'empleados'       && <EmpleadosTab />}
+      {tab === 'empleados'       && <EmpleadosTab abrirNuevo={subvista === 'nuevo'} />}
       {tab === 'recursos'        && <RecursosTab />}
-      {tab === 'config'          && <ConfigNominaTab />}
+      {tab === 'config'          && <ConfigNominaTab seccion={subvista} />}
     </div>
   );
 }
@@ -7747,6 +7797,35 @@ const TIPOS_MOVIMIENTO = [
   'Retorno a departamento anterior',
   'Retorno a funciones anteriores',
 ];
+
+// ── Documentos tamaño carta (constancias, designaciones) ─────────────────────
+// @page sin margen: así el navegador no imprime encabezado/pie ("about:blank").
+// Los márgenes del documento (6 sup, 4 izq, 4 der, 5 inf) van dentro de .hoja.
+const pieGenerado = (user, empresa) =>
+  `[Generado por: ${user?.nombre || ''} — ${dayjs().format('DD/MM/YYYY HH:mm')} — ${empresa?.razon_social || empresa?.nombre_comercial || ''}]`;
+
+function hojaCartaHTML(titulo, contenido, pie) {
+  return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>${titulo}</title>
+<style>@page{size:letter portrait;margin:0}html,body{margin:0;padding:0;background:#fff}body{font-family:Arial,sans-serif;font-size:13px;color:#222;line-height:1.6}.hoja{box-sizing:border-box;width:21.59cm;min-height:27.8cm;padding:6cm 4cm 5cm 4cm;position:relative}h2.titulo{text-align:center;font-size:14px;text-transform:uppercase;letter-spacing:2px;margin:0 0 20px;text-decoration:underline}.cuerpo p{margin:0 0 12px;text-align:justify}table.datos{border-collapse:collapse;width:100%;margin:8px 0 16px}table.datos td{padding:5px 8px;border:1px solid #ccc;font-size:12px}table.datos td.l{width:42%;background:#f5f5f5;font-weight:bold}.generado{position:absolute;left:4cm;right:4cm;bottom:4.6cm;font-size:8pt;color:#b5b5b5;text-align:center}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style>
+</head><body><div class="hoja">${contenido}<div class="generado">${pie || ''}</div></div></body></html>`;
+}
+
+function imprimirHTML(html) {
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+  setTimeout(() => { w.focus(); w.print(); }, 400);
+}
+
+// Vista previa a escala de una hoja carta (816×1056 px a 96 dpi)
+function VistaPreviaHoja({ html, escala = 0.37 }) {
+  return (
+    <div style={{ width: 816 * escala, height: 1056 * escala, overflow: 'hidden', margin: '0 auto', border: '1px solid #2a2a2a', background: '#fff' }}>
+      <iframe title="Vista previa" srcDoc={html}
+        style={{ width: 816, height: 1056, border: 0, background: '#fff', transform: `scale(${escala})`, transformOrigin: '0 0' }} />
+    </div>
+  );
+}
 
 function EmpDropdown({ empleados, value, onSelect, placeholder }) {
   const [q, setQ] = useState('');
@@ -7804,6 +7883,8 @@ function EmpDropdown({ empleados, value, onSelect, placeholder }) {
 }
 
 export function TrayectoriaLaboralPage() {
+  const { user } = useAuth();
+  const [empresa, setEmpresa]           = useState(null);
   const [empleados, setEmpleados]       = useState([]);
   const [buscar, setBuscar]             = useState('');
   const [selEmp, setSelEmp]             = useState(null);
@@ -7825,9 +7906,13 @@ export function TrayectoriaLaboralPage() {
   };
   const [form, setForm] = useState(emptyForm);
 
+  const cargarEmpleados = () =>
+    api.get('/nomina/empleados').then(r => { setEmpleados(r.data); return r.data; }).catch(() => []);
+
   useEffect(() => {
-    api.get('/nomina/empleados').then(r => setEmpleados(r.data)).catch(() => {});
+    cargarEmpleados();
     api.get('/nomina/config').then(r => setMonedaNomina(r.data.moneda_nomina || 'USD')).catch(() => {});
+    api.get('/empresas/me').then(r => setEmpresa(r.data)).catch(() => {});
   }, []);
 
   const filtrados = buscar.trim().length >= 1
@@ -7888,9 +7973,38 @@ export function TrayectoriaLaboralPage() {
       });
       setModal(false);
       await cargarTrayectoria(selEmp);
+      // El movimiento vigente actualiza cargo/departamento en la ficha: refrescar la lista
+      const lista = await cargarEmpleados();
+      const actualizado = lista.find(e => e.id === selEmp.id);
+      if (actualizado) setSelEmp(actualizado);
     } catch (e) {
       setErr(e.response?.data?.error || 'Error al guardar');
     } finally { setGuardando(false); }
+  };
+
+  // Designación de cargo: hoja carta vertical para imprimir o guardar como PDF
+  const handleDesignacion = (t) => {
+    const e = selEmp;
+    const nombre = `${e.apellido}${e.segundo_apellido ? ' ' + e.segundo_apellido : ''}, ${e.nombre}${e.segundo_nombre ? ' ' + e.segundo_nombre : ''}`;
+    const fechaLarga = (f) => new Date(f).toLocaleDateString('es-VE', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
+    const fila = (l, v) => `<tr><td class="l">${l}</td><td>${v}</td></tr>`;
+    const filas = [
+      fila('Cargo', t.cargo),
+      fila('Departamento', t.departamento || '—'),
+      fila('Salario base', fmtSalario(t.salario_base, t.moneda)),
+      fila('Fecha de aplicación', dayjs(t.fecha_aplicacion).format('DD/MM/YYYY')),
+      t.supervisor_nombre ? fila('Supervisor', `${t.supervisor_nombre}${t.supervisor_cedula ? ' (C.I. ' + t.supervisor_cedula + ')' : ''}`) : '',
+      t.periodo_prueba ? fila('Período de prueba', `${t.periodo_prueba_dias} días`) : '',
+    ].join('');
+    const firma = (titulo, sub) => `<div style="flex:1;text-align:center"><div style="border-top:1px solid #333;padding-top:6px;margin:0 16px"><strong>${titulo}</strong><br/><span style="font-size:11px;color:#555">${sub}</span></div></div>`;
+    imprimirHTML(hojaCartaHTML('Designación de Cargo', `
+<h2 class="titulo">Designación de Cargo</h2>
+<div class="cuerpo">
+<p>Por medio de la presente se notifica al ciudadano(a) <strong>${nombre}</strong>, titular de la cédula de identidad N° <strong>${e.letra_ci || 'V'}-${e.cedula}</strong>, que a partir del <strong>${fechaLarga(t.fecha_aplicacion)}</strong> ha sido designado(a) para desempeñar el cargo de <strong>${t.cargo}</strong>${t.departamento ? ` en el departamento de <strong>${t.departamento}</strong>` : ''}, en las condiciones que se indican a continuación:</p>
+</div>
+<table class="datos">${filas}</table>
+<div style="display:flex;margin-top:70px">${firma('Por la empresa', empresa?.razon_social || '')}${firma('Recibí conforme', nombre)}</div>`,
+      pieGenerado(user, empresa)));
   };
 
   const fmtSalario = (monto, moneda) => {
@@ -8049,7 +8163,7 @@ export function TrayectoriaLaboralPage() {
                         <td className="text-gris text-sm">{t.registrado_por || '—'}</td>
                         <td>
                           <button className="btn btn-secondary" style={{ fontSize: 12, padding: '4px 10px' }}
-                            disabled title="Próximamente">
+                            onClick={() => handleDesignacion(t)}>
                             Generar designación
                           </button>
                         </td>
@@ -8211,13 +8325,15 @@ export function ConstanciasPage() {
   const emptyForm = {
     empleado: null, firmante: null,
     dirigida_a: 'interesar', dirigida_personalizada: '',
-    incluye_salario: false, incluye_cesta: false, con_membrete: false,
+    incluye_salario: false, incluye_cesta: false,
   };
   const [form, setForm] = useState(emptyForm);
+  const [cfgNomina, setCfgNomina] = useState(null);
 
   useEffect(() => {
     api.get('/nomina/empleados').then(r => setEmpleados(r.data)).catch(() => {});
     api.get('/empresas/me').then(r => setEmpresa(r.data)).catch(() => {});
+    api.get('/nomina/config').then(r => setCfgNomina(r.data)).catch(() => {});
     cargarConstancias();
   }, []);
 
@@ -8236,6 +8352,7 @@ export function ConstanciasPage() {
     : 'A quien pueda interesar';
 
   const cargoActual = (emp) => emp?.cargo || '—';
+  const fmtMonto = (n) => Number(n || 0).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const generarHTML = (emp, firm) => {
     const hoy = new Date();
@@ -8243,32 +8360,28 @@ export function ConstanciasPage() {
     const mes = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto',
                  'septiembre','octubre','noviembre','diciembre'][hoy.getMonth()];
     const anio = hoy.getFullYear();
+    // El salario se expresa en la moneda de la nómina de salarios (Configuración de Remuneraciones)
+    const monedaSal = (cfgNomina?.moneda_nomina || 'USD') === 'BS' ? 'Bs.' : 'USD';
     const salarioLine = form.incluye_salario && emp?.salario_base
-      ? `<p>Su salario básico mensual es de <strong>${emp.moneda_nomina === 'BS' ? 'Bs.' : 'USD'} ${Number(emp.salario_base).toLocaleString('es-VE', { minimumFractionDigits: 2 })}</strong>.</p>`
+      ? `<p>Su salario básico mensual es de <strong>${monedaSal} ${fmtMonto(emp.salario_base)}</strong>.</p>`
       : '';
-    const cestaLine = form.incluye_cesta && emp?.cesta_ticket_mensual
-      ? `<p>Además percibe beneficio de cesta ticket por un monto de <strong>Bs. ${Number(emp.cesta_ticket_mensual).toLocaleString('es-VE', { minimumFractionDigits: 2 })}</strong> mensual.</p>`
+    // Cesta ticket: monto mensual configurado, siempre en USD
+    const cestaMensual = Number(cfgNomina?.cesta_ticket_dias || 0);
+    const cestaLine = form.incluye_cesta && cestaMensual > 0
+      ? `<p>Además percibe el beneficio de cesta ticket por un monto mensual de <strong>USD ${fmtMonto(cestaMensual)}</strong>.</p>`
       : '';
     const firmanteHtml = firm
       ? `<div style="margin-top:60px;text-align:center;"><div style="display:inline-block;text-align:center;"><div style="border-top:1px solid #333;padding-top:6px;min-width:220px;"><strong>${firm.apellido}, ${firm.nombre}</strong><br/><span style="font-size:12px;color:#555;">${firm.cargo || 'Representante de la Empresa'}</span></div></div></div>`
       : '';
-    const encabezado = !form.con_membrete
-      ? `<div class="header-empresa"><h1>${empresa?.nombre_empresa || empresa?.razon_social || ''}</h1><p>RIF: ${empresa?.rif || ''}</p>${empresa?.direccion ? `<p>${empresa.direccion}</p>` : ''}${empresa?.telefono ? `<p>Tel.: ${empresa.telefono}</p>` : ''}</div>`
-      : '';
-    return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
-<style>@page{size:letter portrait;margin:2.5cm 2.5cm}body{font-family:Arial,sans-serif;font-size:13px;color:#222;line-height:1.6;margin:0}.header-empresa{text-align:center;margin-bottom:30px}.header-empresa h1{font-size:16px;margin:0 0 4px;text-transform:uppercase}.header-empresa p{font-size:12px;margin:0;color:#555}h2.titulo{text-align:center;font-size:14px;text-transform:uppercase;letter-spacing:2px;margin:24px 0 20px;text-decoration:underline}.cuerpo p{margin:0 0 12px;text-align:justify}.pie{margin-top:40px;font-size:11px;color:#888;text-align:center;border-top:1px solid #ddd;padding-top:8px}@media print{body{-webkit-print-color-adjust:exact}}</style>
-</head><body>
-${encabezado}
+    return hojaCartaHTML('Constancia de Trabajo', `
 <h2 class="titulo">Constancia de Trabajo</h2>
 <p><strong>${dirigidaFinal}:</strong></p>
 <div class="cuerpo">
 <p>Por medio de la presente se hace constar que el/la ciudadano(a) <strong>${emp?.apellido || ''}, ${emp?.nombre || ''}${emp?.segundo_nombre ? ' ' + emp.segundo_nombre : ''}</strong>, portador(a) de la cédula de identidad N° <strong>${emp?.letra_ci || 'V'}-${emp?.cedula || ''}</strong>, presta sus servicios en esta empresa bajo la relación de dependencia laboral, desempeñando el cargo de <strong>${cargoActual(emp)}</strong>, desde el <strong>${emp?.fecha_ingreso ? new Date(emp.fecha_ingreso).toLocaleDateString('es-VE', { year:'numeric', month:'long', day:'numeric', timeZone:'UTC' }) : '—'}</strong>.</p>
 ${salarioLine}${cestaLine}
-<p>Constancia que se expide a petición de la parte interesada, en ${empresa?.ciudad || 'su ciudad'}, a los ${dia} días del mes de ${mes} del año ${anio}.</p>
+<p>Constancia que se expide a petición de la parte interesada, en ${empresa?.ciudad || empresa?.municipio || 'su ciudad'}, a los ${dia} días del mes de ${mes} del año ${anio}.</p>
 </div>
-${firmanteHtml}
-<div class="pie">Generado por: ${user?.nombre || ''} — ${empresa?.nombre_empresa || empresa?.razon_social || ''}</div>
-</body></html>`;
+${firmanteHtml}`, pieGenerado(user, empresa));
   };
 
   const handlePreview = () => {
@@ -8279,10 +8392,7 @@ ${firmanteHtml}
   const handleImprimir = () => {
     if (!form.empleado) return setErr('Selecciona un trabajador.');
     setErr('');
-    const w = window.open('', '_blank');
-    w.document.write(generarHTML(form.empleado, form.firmante));
-    w.document.close();
-    setTimeout(() => { w.focus(); w.print(); }, 400);
+    imprimirHTML(generarHTML(form.empleado, form.firmante));
   };
 
   const handleGuardar = async () => {
@@ -8293,7 +8403,7 @@ ${firmanteHtml}
         empleado_id: form.empleado.id, firmante_id: form.firmante?.id || null,
         dirigida_a: dirigidaFinal,
         incluye_salario: form.incluye_salario, incluye_cesta: form.incluye_cesta,
-        con_membrete: form.con_membrete,
+        con_membrete: false,
       });
       await cargarConstancias();
       handleImprimir();
@@ -8383,11 +8493,6 @@ ${firmanteHtml}
                     onChange={e => { setForm({ ...form, incluye_cesta: e.target.checked }); setPreview(false); }} />
                   Incluir cesta ticket
                 </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 13 }}>
-                  <input type="checkbox" checked={form.con_membrete}
-                    onChange={e => { setForm({ ...form, con_membrete: e.target.checked }); setPreview(false); }} />
-                  Agregar hoja membretada (omite encabezado de empresa)
-                </label>
               </div>
             </div>
 
@@ -8424,12 +8529,7 @@ ${firmanteHtml}
           <div className="card" style={{ padding: 16 }}>
             <div className="card-title" style={{ marginBottom: 10 }}>Vista previa</div>
             {preview && form.empleado ? (
-              <div
-                style={{ fontSize: 11, lineHeight: 1.5, color: '#ddd',
-                  border: '1px solid #2a2a2a', borderRadius: 6, padding: 12,
-                  background: '#0d0d0d', maxHeight: 520, overflowY: 'auto' }}
-                dangerouslySetInnerHTML={{ __html: generarHTML(form.empleado, form.firmante) }}
-              />
+              <VistaPreviaHoja html={generarHTML(form.empleado, form.firmante)} />
             ) : (
               <div style={{ padding: '40px 0', textAlign: 'center', color: '#555', fontSize: 13 }}>
                 Selecciona un trabajador y pulsa<br />"Previsualizar constancia"
@@ -8493,7 +8593,6 @@ ${firmanteHtml}
                     <td style={{ fontSize: 11 }}>
                       {c.incluye_salario ? <span className="badge badge-gris" style={{ marginRight: 4 }}>Salario</span> : null}
                       {c.incluye_cesta   ? <span className="badge badge-gris" style={{ marginRight: 4 }}>Cesta</span> : null}
-                      {c.con_membrete    ? <span className="badge badge-gris">Membrete</span> : null}
                     </td>
                     <td className="text-gris text-sm">{c.registrado_por || '—'}</td>
                     <td className="text-sm">{c.created_at ? new Date(c.created_at).toLocaleDateString('es-VE') : '—'}</td>
@@ -8525,7 +8624,6 @@ export function ConstanciaEgresoPage() {
   const emptyForm = {
     empleado: null, firmante: null,
     dirigida_a: 'interesar', dirigida_personalizada: '',
-    con_membrete: false,
   };
   const [form, setForm] = useState(emptyForm);
 
@@ -8564,23 +8662,15 @@ export function ConstanciaEgresoPage() {
     const firmanteHtml = firm
       ? `<div style="margin-top:60px;text-align:center;"><div style="display:inline-block;text-align:center;"><div style="border-top:1px solid #333;padding-top:6px;min-width:220px;"><strong>${firm.apellido}, ${firm.nombre}</strong><br/><span style="font-size:12px;color:#555;">${firm.cargo || 'Representante de la Empresa'}</span></div></div></div>`
       : '';
-    const encabezado = !form.con_membrete
-      ? `<div class="header-empresa"><h1>${empresa?.nombre_empresa || empresa?.razon_social || ''}</h1><p>RIF: ${empresa?.rif || ''}</p>${empresa?.direccion ? `<p>${empresa.direccion}</p>` : ''}${empresa?.telefono ? `<p>Tel.: ${empresa.telefono}</p>` : ''}</div>`
-      : '';
-    return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
-<style>@page{size:letter portrait;margin:2.5cm 2.5cm}body{font-family:Arial,sans-serif;font-size:13px;color:#222;line-height:1.6;margin:0}.header-empresa{text-align:center;margin-bottom:30px}.header-empresa h1{font-size:16px;margin:0 0 4px;text-transform:uppercase}.header-empresa p{font-size:12px;margin:0;color:#555}h2.titulo{text-align:center;font-size:14px;text-transform:uppercase;letter-spacing:2px;margin:24px 0 20px;text-decoration:underline}.cuerpo p{margin:0 0 12px;text-align:justify}.pie{margin-top:40px;font-size:11px;color:#888;text-align:center;border-top:1px solid #ddd;padding-top:8px}@media print{body{-webkit-print-color-adjust:exact}}</style>
-</head><body>
-${encabezado}
+    return hojaCartaHTML('Constancia de Egreso', `
 <h2 class="titulo">Constancia de Egreso</h2>
 <p><strong>${dirigidaFinal}:</strong></p>
 <div class="cuerpo">
 <p>Por medio de la presente se hace constar que el/la ciudadano(a) <strong>${emp?.apellido || ''}, ${emp?.nombre || ''}${emp?.segundo_nombre ? ' ' + emp.segundo_nombre : ''}</strong>, portador(a) de la cédula de identidad N° <strong>${emp?.letra_ci || 'V'}-${emp?.cedula || ''}</strong>, prestó sus servicios en esta empresa bajo la relación de dependencia laboral, desempeñando el cargo de <strong>${emp?.cargo || '—'}</strong>.</p>
 <p>Su relación laboral se inició el <strong>${fechaIngreso}</strong> y concluyó el <strong>${fechaEgreso}</strong>, habiendo cumplido con sus responsabilidades de manera satisfactoria durante el período de servicio.</p>
-<p>Constancia que se expide a petición de la parte interesada, en ${empresa?.ciudad || 'su ciudad'}, a los ${dia} días del mes de ${mes} del año ${anio}.</p>
+<p>Constancia que se expide a petición de la parte interesada, en ${empresa?.ciudad || empresa?.municipio || 'su ciudad'}, a los ${dia} días del mes de ${mes} del año ${anio}.</p>
 </div>
-${firmanteHtml}
-<div class="pie">Generado por: ${user?.nombre || ''} — ${empresa?.nombre_empresa || empresa?.razon_social || ''}</div>
-</body></html>`;
+${firmanteHtml}`, pieGenerado(user, empresa));
   };
 
   const handlePreview = () => {
@@ -8591,10 +8681,7 @@ ${firmanteHtml}
   const handleImprimir = () => {
     if (!form.empleado) return setErr('Selecciona un trabajador egresado.');
     setErr('');
-    const w = window.open('', '_blank');
-    w.document.write(generarHTML(form.empleado, form.firmante));
-    w.document.close();
-    setTimeout(() => { w.focus(); w.print(); }, 400);
+    imprimirHTML(generarHTML(form.empleado, form.firmante));
   };
 
   const handleGuardar = async () => {
@@ -8603,7 +8690,7 @@ ${firmanteHtml}
     try {
       await api.post('/nomina/constancias', {
         empleado_id: form.empleado.id, firmante_id: form.firmante?.id || null,
-        tipo: 'EGRESO', dirigida_a: dirigidaFinal, con_membrete: form.con_membrete,
+        tipo: 'EGRESO', dirigida_a: dirigidaFinal, con_membrete: false,
       });
       await cargarConstancias();
       handleImprimir();
@@ -8688,13 +8775,6 @@ ${firmanteHtml}
                     placeholder="Ej: Embajada de España en Venezuela" />
                 )}
               </div>
-              <div style={{ marginTop: 8 }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 13 }}>
-                  <input type="checkbox" checked={form.con_membrete}
-                    onChange={e => { setForm({ ...form, con_membrete: e.target.checked }); setPreview(false); }} />
-                  Agregar hoja membretada (omite encabezado de empresa)
-                </label>
-              </div>
             </div>
 
             {/* Firmante */}
@@ -8730,12 +8810,7 @@ ${firmanteHtml}
           <div className="card" style={{ padding: 16 }}>
             <div className="card-title" style={{ marginBottom: 10 }}>Vista previa</div>
             {preview && form.empleado ? (
-              <div
-                style={{ fontSize: 11, lineHeight: 1.5, color: '#ddd',
-                  border: '1px solid #2a2a2a', borderRadius: 6, padding: 12,
-                  background: '#0d0d0d', maxHeight: 520, overflowY: 'auto' }}
-                dangerouslySetInnerHTML={{ __html: generarHTML(form.empleado, form.firmante) }}
-              />
+              <VistaPreviaHoja html={generarHTML(form.empleado, form.firmante)} />
             ) : (
               <div style={{ padding: '40px 0', textAlign: 'center', color: '#555', fontSize: 13 }}>
                 Selecciona un trabajador egresado y pulsa<br />"Previsualizar constancia de egreso"
@@ -8783,7 +8858,7 @@ ${firmanteHtml}
               <thead>
                 <tr>
                   <th>#</th><th>Trabajador egresado</th><th>Dirigida a</th>
-                  <th>Firmante</th><th>Membrete</th><th>Registrado por</th><th>Fecha</th>
+                  <th>Firmante</th><th>Registrado por</th><th>Fecha</th>
                 </tr>
               </thead>
               <tbody>
@@ -8796,9 +8871,6 @@ ${firmanteHtml}
                     </td>
                     <td className="text-sm">{c.dirigida_a}</td>
                     <td className="text-sm text-gris">{c.firmante_nombre || '—'}</td>
-                    <td style={{ fontSize: 11 }}>
-                      {c.con_membrete ? <span className="badge badge-gris">Membrete</span> : '—'}
-                    </td>
                     <td className="text-gris text-sm">{c.registrado_por || '—'}</td>
                     <td className="text-sm">{c.created_at ? new Date(c.created_at).toLocaleDateString('es-VE') : '—'}</td>
                   </tr>
