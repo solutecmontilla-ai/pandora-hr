@@ -343,6 +343,12 @@ const nominaRoute = async (fastify) => {
     await db.transaction(async (conn) => {
       await conn.execute('DELETE FROM nomina_items WHERE empleado_id=?', [emp.id]);
       await conn.execute('DELETE FROM vacaciones_calculadas WHERE empleado_id=?', [emp.id]);
+      await conn.execute('DELETE FROM utilidades_calculadas WHERE empleado_id=?', [emp.id]);
+      await conn.execute('DELETE FROM constancias_trabajo WHERE empleado_id=?', [emp.id]);
+      await conn.execute('DELETE FROM trayectoria_laboral WHERE empleado_id=?', [emp.id]);
+      // Si firmaba constancias o supervisaba a otros, esos registros se conservan sin la referencia
+      await conn.execute('UPDATE constancias_trabajo SET firmante_id=NULL WHERE firmante_id=?', [emp.id]);
+      await conn.execute('UPDATE trayectoria_laboral SET supervisor_id=NULL WHERE supervisor_id=?', [emp.id]);
       // empleado_periodos ya tiene ON DELETE CASCADE, pero se borra explícitamente por claridad
       await conn.execute('DELETE FROM empleado_periodos WHERE empleado_id=?', [emp.id]);
       await conn.execute('DELETE FROM empleados WHERE id=? AND empresa_id=?', [emp.id, req.empresaId]);
